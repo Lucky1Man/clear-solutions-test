@@ -79,7 +79,7 @@ public class UserController {
             description = "User was successfully created. It returns id of created user",
             content = @Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = Map.class)
+                    schema = @Schema(pattern = "{\"id\": \"28db0f04-0678-486a-80fb-2c7465bf0e13\"}")
             )
     )
     @ApiResponse(
