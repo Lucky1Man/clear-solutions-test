@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: clear-solutions-test
+
+application:
+  properties:
+    minimal-user-age: 18
