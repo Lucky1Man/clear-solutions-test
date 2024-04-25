@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.clearsolutionstest.dto.CreateUserDto;
 import org.example.clearsolutionstest.dto.GetUserDto;
 import org.example.clearsolutionstest.dto.UpdateUserDto;
@@ -36,6 +37,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")
+@Slf4j
 public class UserController {
 
     private final UserService userService;
@@ -65,11 +67,13 @@ public class UserController {
     public List<GetUserDto> getUsers(@RequestParam LocalDate from, @RequestParam LocalDate to,
                                      @RequestParam(required = false, defaultValue = "0") Integer pageIndex,
                                      @RequestParam(required = false, defaultValue = "50") Integer pageSize) {
+        log.debug("getUsers {}, {}, {}, {}", from, to, pageIndex, pageSize);
         List<GetUserDto> allByBirthDateRange = userService.findAllByBirthDateRange(from, to, pageIndex, pageSize);
         allByBirthDateRange.forEach(user ->
                 user.add(linkTo(methodOn(UserController.class).deleteUser(user.getId()))
                         .withRel("selfDelete").withType(HttpMethod.DELETE.toString()))
         );
+        log.debug("end getUsers {}", allByBirthDateRange);
         return allByBirthDateRange;
     }
 
@@ -94,8 +98,11 @@ public class UserController {
             )
     )
     public ResponseEntity<Map<String, UUID>> createUser(@RequestBody CreateUserDto userDto) {
-        return ResponseEntity.status(HttpStatus.CREATED.value())
+        log.debug("createUser {}", userDto);
+        ResponseEntity<Map<String, UUID>> response = ResponseEntity.status(HttpStatus.CREATED.value())
                 .body(Map.of("id", userService.createUser(userDto)));
+        log.debug("end createUser {}", response);
+        return response;
     }
 
     @PutMapping("/{id}")
@@ -117,12 +124,15 @@ public class UserController {
             )
     )
     public ResponseEntity<EntityModel<Void>> updateUser(@PathVariable UUID id, @RequestBody UpdateUserDto userDto) {
+        log.debug("updateUser {}, {}", id, userDto);
         userService.updateUser(id, userDto);
-        return ResponseEntity.ok(new EntityModel<Void>() {}
+        ResponseEntity<EntityModel<Void>> response = ResponseEntity.ok(new EntityModel<Void>() {}
                 .add(
                         linkTo(methodOn(UserController.class).deleteUser(id))
                                 .withRel("selfDelete").withType(HttpMethod.DELETE.toString())
                 ));
+        log.debug("end updateUser {}", response);
+        return response;
     }
 
     @DeleteMapping("/{id}")
@@ -132,8 +142,11 @@ public class UserController {
             description = "User with given id deleted."
     )
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
+        log.debug("deleteUser {}", id);
         userService.deleteUser(id);
-        return ResponseEntity.ok().build();
+        ResponseEntity<Void> response = ResponseEntity.ok().build();
+        log.debug("end deleteUser {}", response);
+        return response;
     }
 
 }
