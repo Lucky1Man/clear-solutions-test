@@ -2,6 +2,7 @@ package org.example.clearsolutionstest.service.impl;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.example.clearsolutionstest.dto.CreateUserDto;
@@ -11,6 +12,7 @@ import org.example.clearsolutionstest.entity.User;
 import org.example.clearsolutionstest.repository.UserRepository;
 import org.example.clearsolutionstest.service.UserService;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -71,11 +73,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<GetUserDto> findAllByBirthDateRange(@NotNull LocalDate from, @NotNull LocalDate to) {
+    public List<GetUserDto> findAllByBirthDateRange(@NotNull LocalDate from, @NotNull LocalDate to,
+                                                    @NotNull Integer pageIndex, @NotNull @Max(500) Integer pageSize) {
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("From date is after to date");
         }
-        return userRepository.getAllByBirthDateRange(from, to).stream()
+        return userRepository.getAllByBirthDateRange(from, to, PageRequest.of(pageIndex, pageSize)).stream()
                 .map(user -> modelMapper.map(user, GetUserDto.class))
                 .toList();
     }

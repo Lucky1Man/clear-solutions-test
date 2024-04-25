@@ -1,6 +1,7 @@
 package org.example.clearsolutionstest.service;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import org.example.clearsolutionstest.dto.CreateUserDto;
 import org.example.clearsolutionstest.dto.GetUserDto;
@@ -20,6 +21,7 @@ public interface UserService {
 
     void deleteUser(@NotNull UUID id);
 
-    List<GetUserDto> findAllByBirthDateRange(@NotNull LocalDate from, @NotNull LocalDate to);
+    List<GetUserDto> findAllByBirthDateRange(@NotNull LocalDate from, @NotNull LocalDate to,
+                                             @NotNull Integer pageIndex, @NotNull @Max(500) Integer pageSize);
 
 }

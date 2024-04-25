@@ -42,7 +42,8 @@ public class UserController {
 
     @GetMapping
     @Operation(
-            description = "Returns list of users by specified filter"
+            description = "Returns list of users by specified filter. Default values: pageIndex=0, pageSize=50." +
+                          " pageSize max value is 500"
     )
     @ApiResponse(
             responseCode = "200",
@@ -61,8 +62,10 @@ public class UserController {
                     schema = @Schema(implementation = ExceptionResponse.class)
             )
     )
-    public List<GetUserDto> getUsers(@RequestParam LocalDate from, @RequestParam LocalDate to) {
-        List<GetUserDto> allByBirthDateRange = userService.findAllByBirthDateRange(from, to);
+    public List<GetUserDto> getUsers(@RequestParam LocalDate from, @RequestParam LocalDate to,
+                                     @RequestParam(required = false, defaultValue = "0") Integer pageIndex,
+                                     @RequestParam(required = false, defaultValue = "50") Integer pageSize) {
+        List<GetUserDto> allByBirthDateRange = userService.findAllByBirthDateRange(from, to, pageIndex, pageSize);
         allByBirthDateRange.forEach(user ->
                 user.add(linkTo(methodOn(UserController.class).deleteUser(user.getId()))
                         .withRel("selfDelete").withType(HttpMethod.DELETE.toString()))

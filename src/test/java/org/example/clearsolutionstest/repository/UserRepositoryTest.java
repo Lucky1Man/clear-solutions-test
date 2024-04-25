@@ -5,6 +5,7 @@ import org.example.clearsolutionstest.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDate;
@@ -41,7 +42,7 @@ class UserRepositoryTest {
         userRepository.saveAllAndFlush(users);
         List<User> expected = users.subList(1, users.size() - 1);
         //when
-        List<User> actual = userRepository.getAllByBirthDateRange(from, to);
+        List<User> actual = userRepository.getAllByBirthDateRange(from, to, Pageable.ofSize(3));
         //then
         assertEquals(expected.size(), actual.size(), "Should have same amount of elements");
         assertTrue(actual.containsAll(expected), "Should contain all expected values");
@@ -53,7 +54,7 @@ class UserRepositoryTest {
         LocalDate from = LocalDate.of(2000, 2, 1);
         LocalDate to = LocalDate.of(2000, 5, 1);
         //when
-        List<User> actual = userRepository.getAllByBirthDateRange(from, to);
+        List<User> actual = userRepository.getAllByBirthDateRange(from, to, Pageable.ofSize(2));
         //then
         assertTrue(actual.isEmpty(), "should be empty");
     }

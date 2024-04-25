@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -326,6 +328,9 @@ class UserServiceImplTest {
         //given
         LocalDate from = LocalDate.of(2000, 1, 1);
         LocalDate to = LocalDate.of(2000, 5, 1);
+        Integer pageIndex = 0;
+        Integer pageSize = 50;
+        PageRequest pageable = PageRequest.of(pageIndex, pageSize);
         List<User> usersFromDb = List.of(
                 new User(UUID.randomUUID(), "email1@gmail.com", "first 1", "last 1",
                         LocalDate.of(2000, 1, 1), "Country 1, City 1", "3803424234242"),
@@ -336,32 +341,45 @@ class UserServiceImplTest {
                 user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getBirthDate(),
                 user.getAddress(), user.getPhoneNumber()
         )).toList();
-        given(userRepository.getAllByBirthDateRange(from, to)).willReturn(usersFromDb);
+        given(userRepository.getAllByBirthDateRange(from, to, pageable)).willReturn(usersFromDb);
         //when
-        List<GetUserDto> actualUsers = userService.findAllByBirthDateRange(from, to);
+        List<GetUserDto> actualUsers = userService.findAllByBirthDateRange(from, to, pageIndex, pageSize);
         //then
         assertEquals(expectedUsers.size(), actualUsers.size(), "Returned value should have same size");
         assertTrue(actualUsers.containsAll(expectedUsers), "Return value should contain all users");
-        verify(userRepository, times(1)).getAllByBirthDateRange(from, to);
+        verify(userRepository, times(1)).getAllByBirthDateRange(from, to, pageable);
     }
 
     @Test
     void findAllByBirthDateRange_shouldThrowConstraintViolationException_ifGivenArgsAreNull() {
         //then
-        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class, () -> userService.findAllByBirthDateRange(null, null));
+        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+                () -> userService.findAllByBirthDateRange(null, null, null, null));
         assertTrue(ex.getMessage().contains("findAllByBirthDateRange.from: must not be null"), "should have from is null message");
         assertTrue(ex.getMessage().contains("findAllByBirthDateRange.to: must not be null"), "should have to is null message");
+        assertTrue(ex.getMessage().contains("findAllByBirthDateRange.pageIndex: must not be null"), "should have to is null message");
+        assertTrue(ex.getMessage().contains("findAllByBirthDateRange.pageSize: must not be null"), "should have to is null message");
+    }
+
+    @Test
+    void findAllByBirthDateRange_shouldThrowConstraintViolationException_ifGivenPageSizeIsTooBig() {
+        //then
+        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+                () -> userService.findAllByBirthDateRange(null, null, null, 501));
+        assertTrue(ex.getMessage().contains("findAllByBirthDateRange.pageSize: must be less than or equal to 500"), "should have to is null message");
     }
 
     @Test
     void findAllByBirthDateRange_shouldThrowIllegalArgumentException_ifGivenFromDateIsAfterToDate() {
         //given
+        Integer pageIndex = 0;
+        Integer pageSize = 50;
         LocalDate from = LocalDate.of(2000, 6, 1);
         LocalDate to = LocalDate.of(2000, 5, 1);
         //then
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.findAllByBirthDateRange(from, to));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.findAllByBirthDateRange(from, to, pageIndex, pageSize));
         assertEquals("From date is after to date", ex.getMessage());
-        verify(userRepository, never()).getAllByBirthDateRange(from, to);
+        verify(userRepository, never()).getAllByBirthDateRange(eq(from), eq(to), any());
     }
 
 }

@@ -87,7 +87,83 @@ class UserControllerTest {
         //given
         LocalDate from = LocalDate.of(2000, 1, 1);
         LocalDate to = LocalDate.of(2000, 5, 1);
-        given(userService.findAllByBirthDateRange(from, to)).willReturn(expectedUsers);
+        Integer pageIndex = 0;
+        Integer pageSize = 50;
+        given(userService.findAllByBirthDateRange(from, to, pageIndex, pageSize)).willReturn(expectedUsers);
+        //when
+        ResultActions result = mvc.perform(get("/api/v1/users")
+                .param("from", formattedDate(from))
+                .param("to", formattedDate(to))
+                .param("pageIndex", pageIndex.toString())
+                .param("pageSize", pageSize.toString()));
+        //then
+        String resultJson = result
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(expectedUsers.size())))
+                .andExpect(jsonPath("[0].links[0].rel", is("selfDelete")))
+                .andExpect(jsonPath(
+                        "[0].links[0].href",
+                        containsString("/api/v1/users/%s".formatted(expectedUsers.get(0).getId()))
+                ))
+                .andExpect(jsonPath("[0].links[0].type", is("DELETE")))
+                .andExpect(jsonPath("[1].links[0].rel", is("selfDelete")))
+                .andExpect(jsonPath(
+                        "[1].links[0].href",
+                        containsString("/api/v1/users/%s".formatted(expectedUsers.get(1).getId()))
+                ))
+                .andExpect(jsonPath("[1].links[0].type", is("DELETE")))
+                .andReturn().getResponse().getContentAsString();
+        List<GetUserDto> actualUsers = objectMapper.readValue(resultJson, new TypeReference<List<GetUserDto>>() {
+        });
+        assertTrue(expectedUsers.containsAll(actualUsers), "Result should contain all users.");
+        verify(userService, times(1)).findAllByBirthDateRange(from, to, pageIndex, pageSize);
+    }
+
+    private String formattedDate(LocalDate date) {
+        return date.format(DateTimeFormatter.ISO_DATE);
+    }
+
+    @SneakyThrows
+    @Test
+    void getUsers_shouldReturnExceptionResponse_ifIllegalArgumentExceptionWasThrownInService() {
+        //given
+        LocalDate from = LocalDate.of(2000, 6, 1);
+        LocalDate to = LocalDate.of(2000, 5, 1);
+        Integer pageIndex = 0;
+        Integer pageSize = 50;
+        String expectedMessage = "From date is after to date";
+        given(userService.findAllByBirthDateRange(from, to, pageIndex, pageSize)).willThrow(new IllegalArgumentException(expectedMessage));
+        LocalDateTime expectedExceptionTime = LocalDateTime.of(2001, 1, 1, 0, 0);
+        given(timeService.utcNow()).willReturn(expectedExceptionTime);
+        //when
+        ResultActions result = mvc.perform(get("/api/v1/users")
+                .param("from", formattedDate(from))
+                .param("to", formattedDate(to))
+                .param("pageIndex", pageIndex.toString())
+                .param("pageSize", pageSize.toString()));
+        //then
+        String resultJson = result
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn().getResponse().getContentAsString();
+        ExceptionResponse actualResult = objectMapper.readValue(resultJson, ExceptionResponse.class);
+        assertTrue(actualResult.getMessage().contains(expectedMessage), "Result should contain expected message.");
+        assertEquals(expectedExceptionTime, actualResult.getDate());
+        assertEquals(BAD_REQUEST, actualResult.getHttpStatus());
+        verify(timeService, times(1)).utcNow();
+        verify(userService, times(1)).findAllByBirthDateRange(from, to, pageIndex, pageSize);
+    }
+
+    @SneakyThrows
+    @Test
+    void getUsers_shouldAssignDefaultValuesForPageIndexAndPageSize_ifParametersAreNotSpecified() {
+        //given
+        LocalDate from = LocalDate.of(2000, 1, 1);
+        LocalDate to = LocalDate.of(2000, 5, 1);
+        Integer defaultPageIndex = 0;
+        Integer defaultPageSize = 50;
+        given(userService.findAllByBirthDateRange(from, to, defaultPageIndex, defaultPageSize)).willReturn(expectedUsers);
         //when
         ResultActions result = mvc.perform(get("/api/v1/users")
                 .param("from", formattedDate(from))
@@ -113,38 +189,7 @@ class UserControllerTest {
         List<GetUserDto> actualUsers = objectMapper.readValue(resultJson, new TypeReference<List<GetUserDto>>() {
         });
         assertTrue(expectedUsers.containsAll(actualUsers), "Result should contain all users.");
-        verify(userService, times(1)).findAllByBirthDateRange(from, to);
-    }
-
-    private String formattedDate(LocalDate date) {
-        return date.format(DateTimeFormatter.ISO_DATE);
-    }
-
-    @SneakyThrows
-    @Test
-    void getUsers_shouldReturnExceptionResponse_ifIllegalArgumentExceptionWasThrownInService() {
-        //given
-        LocalDate from = LocalDate.of(2000, 6, 1);
-        LocalDate to = LocalDate.of(2000, 5, 1);
-        String expectedMessage = "From date is after to date";
-        given(userService.findAllByBirthDateRange(from, to)).willThrow(new IllegalArgumentException(expectedMessage));
-        LocalDateTime expectedExceptionTime = LocalDateTime.of(2001, 1, 1, 0, 0);
-        given(timeService.utcNow()).willReturn(expectedExceptionTime);
-        //when
-        ResultActions result = mvc.perform(get("/api/v1/users")
-                .param("from", formattedDate(from))
-                .param("to", formattedDate(to)));
-        //then
-        String resultJson = result
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn().getResponse().getContentAsString();
-        ExceptionResponse actualResult = objectMapper.readValue(resultJson, ExceptionResponse.class);
-        assertTrue(actualResult.getMessage().contains(expectedMessage), "Result should contain expected message.");
-        assertEquals(expectedExceptionTime, actualResult.getDate());
-        assertEquals(BAD_REQUEST, actualResult.getHttpStatus());
-        verify(timeService, times(1)).utcNow();
-        verify(userService, times(1)).findAllByBirthDateRange(from, to);
+        verify(userService, times(1)).findAllByBirthDateRange(from, to, defaultPageIndex, defaultPageSize);
     }
 
     @SneakyThrows
